@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import prisma from '@/lib/prisma';
 import { requireStore } from '@/lib/shopify/session';
-import { runFullSync } from '@/lib/sync';
+import { runFullSync, explainSyncError } from '@/lib/sync';
 import { backfillMetrics } from '@/lib/metrics';
 import { runAlertScan } from '@/lib/alerts/scan';
 import { registerWebhooks } from '@/lib/shopify/webhooks';
@@ -39,6 +39,7 @@ export const POST = withStore(async (request) => {
       ok: true,
       products: sync.products.count,
       orders: sync.orders.count,
+      warnings: sync.warnings,
       scan,
       lastSyncAt: new Date().toISOString(),
     });
@@ -48,7 +49,9 @@ export const POST = withStore(async (request) => {
     return NextResponse.json(
       {
         ok: false,
-        error: "We couldn't retrieve your Shopify data. We'll automatically retry.",
+        // explainSyncError has already reduced this to a merchant-safe
+        // sentence — no stack trace or internal detail reaches the browser.
+        error: explainSyncError(error),
         lastSyncAt: last?.lastSyncAt ?? null,
       },
       { status: 502 }

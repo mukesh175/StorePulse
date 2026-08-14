@@ -197,6 +197,20 @@ export default function OnboardingFlow({ store }) {
             </p>
           )}
 
+          {scan.result?.warnings?.length > 0 && (
+            <div className="sp-banner warning mt-3 text-start">
+              <span aria-hidden="true">⚠</span>
+              <div>
+                <strong>Some data could not be synced.</strong>
+                {scan.result.warnings.map((warning) => (
+                  <div className="mt-1" key={warning.phase}>
+                    {warning.message}
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
           <button className="sp-btn sp-btn-primary w-100 mt-4" onClick={() => setStep(4)}>
             Set up notifications
           </button>

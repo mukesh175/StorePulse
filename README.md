@@ -296,6 +296,7 @@ curl -H "Authorization: Bearer $CRON_SECRET" "https://<your-domain>/api/cron/dai
 | `Invalid request signature` on install | `SHOPIFY_API_SECRET` does not match the app, or the URL was hand-edited. |
 | Redirect loop back to `/` | Session cookie blocked. In production the cookie is `SameSite=None; Secure`, which requires HTTPS. |
 | `Shopify rejected the access token` | App was uninstalled/reinstalled — reinstall to mint a fresh token. |
+| `This app is not approved to access the Order object` | Protected customer data access has not been granted. Partner dashboard → app → **API access** → **Protected customer data access** → request access, tick customer **Name** and **Email**, save, then reinstall. Applies immediately on development stores. Products still sync without it; orders, metrics and order/refund/sales alerts do not. |
 | Webhooks return 401 | The request did not come from Shopify, or the secret is wrong. |
 | No digest email | Check `/notifications` for `SKIPPED`/`FAILED`, confirm `RESEND_API_KEY`, and that the store's local hour matches `digestHour`. |
 | `Can't reach database server` | Use the **pooled** Neon URL for `DATABASE_URL`; check `sslmode=require`. |
