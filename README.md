@@ -60,12 +60,31 @@ Shopify webhook ──► /api/webhooks/[topic]
 
 Vercel Cron covers what webhooks cannot see — the passage of time:
 
+**Deployed schedule (`vercel.json`) — Hobby-compatible:**
+
 | Cron | Schedule | Purpose |
 | --- | --- | --- |
-| `/api/cron/metrics` | hourly | Recompute today's + yesterday's `DailyMetric`. |
-| `/api/cron/scan` | every 30 min | Run time-based rules (delays, refund spikes, sales trends). |
-| `/api/cron/daily-digest` | hourly | Send to stores whose local hour matches their digest hour. |
-| `/api/cron/weekly-summary` | Mondays | Weekly report. |
+| `/api/cron/daily` | `30 2 * * *` (02:30 UTC / 08:00 IST) | Metrics + alert scan + daily digest. |
+| `/api/cron/weekly-summary` | `30 3 * * 1` | Weekly report. |
+
+Vercel's **Hobby plan only allows cron expressions that fire at most once per day**, so the three
+higher-frequency jobs are merged into `/api/cron/daily`. Those endpoints still exist and work — on the Pro plan,
+swap the `crons` array in `vercel.json` for the split schedule below to get near-real-time scanning and
+per-timezone digest delivery:
+
+```json
+"crons": [
+  { "path": "/api/cron/metrics",        "schedule": "10 * * * *" },
+  { "path": "/api/cron/scan",           "schedule": "*/30 * * * *" },
+  { "path": "/api/cron/daily-digest",   "schedule": "0 * * * *" },
+  { "path": "/api/cron/weekly-summary", "schedule": "30 6 * * 1" }
+]
+```
+
+**Trade-off on Hobby:** the digest goes out at one fixed UTC time for every store rather than at each
+merchant's local `digestHour`. Pick a UTC hour that suits your merchants' timezone (`30 2 * * *` is 08:00 in
+IST). Time-based alerts are detected once a day instead of every 30 minutes; webhook-driven alerts
+(sold-out, low stock, new orders) are still instant on both plans.
 
 ```
 app/
@@ -242,14 +261,14 @@ vercel --prod
 
 ## 14. Vercel Cron configuration
 
-`vercel.json` declares all four jobs. Vercel automatically sends
+`vercel.json` declares two daily jobs (see the Hobby/Pro note in **Architecture**). Vercel automatically sends
 `Authorization: Bearer $CRON_SECRET` when `CRON_SECRET` exists in the project's environment variables —
 `lib/cron.js` rejects anything else with 401.
 
 Run one manually:
 
 ```bash
-curl -H "Authorization: Bearer $CRON_SECRET" https://<your-domain>/api/cron/daily-digest?force=true
+curl -H "Authorization: Bearer $CRON_SECRET" "https://<your-domain>/api/cron/daily"
 ```
 
 ## 15. Troubleshooting
@@ -271,7 +290,7 @@ curl -H "Authorization: Bearer $CRON_SECRET" https://<your-domain>/api/cron/dail
 - [ ] All environment variables set in Vercel (Production **and** Preview)
 - [ ] `SHOPIFY_APP_URL` matches the deployed domain and the Partner dashboard redirect URL
 - [ ] `APP_SESSION_SECRET` is a fresh 32+ character random value
-- [ ] `CRON_SECRET` set; all four cron jobs visible in the Vercel dashboard
+- [ ] `CRON_SECRET` set; both cron jobs visible in the Vercel dashboard
 - [ ] `DEMO_MODE` is **not** `true` in production
 - [ ] Resend domain verified and `RESEND_FROM_EMAIL` uses it
 - [ ] Test install on a development store: OAuth → onboarding → dashboard
