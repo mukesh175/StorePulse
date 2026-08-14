@@ -28,17 +28,25 @@ export const POST = withStore(async (request) => {
     return NextResponse.json({ ok: true, demo: true, scan });
   }
 
+  // Leave headroom inside the platform's function limit for the metrics
+  // backfill and alert scan that follow, so we return JSON instead of being
+  // killed mid-request (which surfaces as a non-JSON platform error page).
+  const deadline = Date.now() + 35_000;
+
   try {
     if (body.registerWebhooks) await registerWebhooks(store);
 
-    const sync = await runFullSync(store, { max: 500 });
+    const sync = await runFullSync(store, { max: 500, deadline });
     await backfillMetrics(sync.store, { days: 60 });
     const scan = await runAlertScan(sync.store, { notify });
 
     return NextResponse.json({
       ok: true,
+      complete: sync.complete,
       products: sync.products.count,
+      productsTotal: sync.products.total ?? sync.products.count,
       orders: sync.orders.count,
+      ordersTotal: sync.orders.total ?? sync.orders.count,
       warnings: sync.warnings,
       scan,
       lastSyncAt: new Date().toISOString(),

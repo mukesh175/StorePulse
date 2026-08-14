@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
+import { fetchJson } from '@/lib/utils/fetchJson';
 
 const SCAN_STEPS = ['Products', 'Inventory', 'Orders', 'Refunds', 'Store settings'];
 
@@ -40,15 +41,20 @@ export default function OnboardingFlow({ store }) {
     }, 900);
 
     try {
-      const res = await fetch('/api/sync', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ notify: false, registerWebhooks: true }),
-      });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || 'Sync failed');
+      // A large catalogue cannot be written inside one serverless invocation,
+      // so the endpoint returns complete:false and we resume where it stopped.
+      let data;
+      let attempts = 0;
+      do {
+        data = await fetchJson('/api/sync', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ notify: false, registerWebhooks: attempts === 0 }),
+        });
+        attempts += 1;
+      } while (data.complete === false && attempts < 8);
 
-      const health = await fetch('/api/dashboard/summary').then((r) => r.json());
+      const health = await fetchJson('/api/dashboard/summary');
       clearInterval(ticker);
       setScan({ running: false, done: SCAN_STEPS.length, error: null, result: { ...data, health } });
       setTimeout(() => setStep(3), 600);

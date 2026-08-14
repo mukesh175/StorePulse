@@ -2,6 +2,7 @@
 
 import { useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
+import { fetchJson } from '@/lib/utils/fetchJson';
 
 export default function SyncButton() {
   const router = useRouter();
@@ -11,14 +12,18 @@ export default function SyncButton() {
   async function resync() {
     setState({ loading: true, error: null });
     try {
-      const res = await fetch('/api/sync', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ notify: true }),
-      });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || 'Sync failed');
-      setState({ loading: false, error: null });
+      let data;
+      let attempts = 0;
+      do {
+        data = await fetchJson('/api/sync', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ notify: true }),
+        });
+        attempts += 1;
+      } while (data.complete === false && attempts < 8);
+
+      setState({ loading: false, error: data.warnings?.[0]?.message ?? null });
       startTransition(() => router.refresh());
     } catch (error) {
       setState({ loading: false, error: error.message });
