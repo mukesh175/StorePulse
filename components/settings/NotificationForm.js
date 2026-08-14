@@ -1,0 +1,168 @@
+'use client';
+
+import { useState } from 'react';
+
+const HOURS = Array.from({ length: 24 }, (_, h) => h);
+
+function Toggle({ id, label, help, checked, onChange, disabled }) {
+  return (
+    <div className="sp-switch-row">
+      <div>
+        <label htmlFor={id} style={{ fontWeight: 570, fontSize: 14, cursor: disabled ? 'default' : 'pointer' }}>
+          {label}
+        </label>
+        {help && <div className="sp-help">{help}</div>}
+      </div>
+      <input
+        id={id}
+        type="checkbox"
+        className="sp-switch"
+        checked={checked}
+        disabled={disabled}
+        onChange={(e) => onChange(e.target.checked)}
+      />
+    </div>
+  );
+}
+
+export default function NotificationForm({ initial }) {
+  const [form, setForm] = useState(initial);
+  const [state, setState] = useState({ saving: false, saved: false, error: null });
+
+  const set = (key) => (value) => {
+    setForm((prev) => ({ ...prev, [key]: value }));
+    setState((s) => ({ ...s, saved: false }));
+  };
+
+  async function save(event) {
+    event.preventDefault();
+    setState({ saving: true, saved: false, error: null });
+    try {
+      const res = await fetch('/api/notifications/preferences', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(form),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Could not save your preferences');
+      setForm((prev) => ({ ...prev, ...data.preferences }));
+      setState({ saving: false, saved: true, error: null });
+    } catch (error) {
+      setState({ saving: false, saved: false, error: error.message });
+    }
+  }
+
+  async function enableBrowserNotifications() {
+    if (typeof window === 'undefined' || !('Notification' in window)) {
+      setState((s) => ({ ...s, error: 'This browser does not support notifications' }));
+      return;
+    }
+    const permission = await Notification.requestPermission();
+    set('browserNotificationsEnabled')(permission === 'granted');
+    if (permission !== 'granted') {
+      setState((s) => ({ ...s, error: 'Browser notifications were blocked in your browser settings' }));
+    }
+  }
+
+  return (
+    <form onSubmit={save}>
+      <div className="sp-card sp-card-pad mb-3">
+        <div className="sp-card-title mb-1">Email</div>
+        <div className="sp-card-sub mb-2">Where StorePulse sends alerts and your daily brief.</div>
+
+        <label className="sp-label" htmlFor="notifyEmail">
+          Notification email
+        </label>
+        <input
+          id="notifyEmail"
+          type="email"
+          className="sp-input"
+          value={form.notifyEmail ?? ''}
+          onChange={(e) => set('notifyEmail')(e.target.value)}
+          placeholder="you@yourstore.com"
+        />
+        <div className="sp-help">Leave blank to use the email on your Shopify account.</div>
+
+        <div className="mt-2">
+          <Toggle
+            id="emailEnabled"
+            label="Email notifications"
+            help="Master switch for every StorePulse email."
+            checked={form.emailEnabled}
+            onChange={set('emailEnabled')}
+          />
+          <Toggle
+            id="instantAlertsEnabled"
+            label="Instant critical alerts"
+            help="Sent the moment a critical issue is detected — one email per issue, never repeated."
+            checked={form.instantAlertsEnabled}
+            onChange={set('instantAlertsEnabled')}
+            disabled={!form.emailEnabled}
+          />
+          <Toggle
+            id="dailyDigestEnabled"
+            label="Daily digest"
+            help="Your morning store brief."
+            checked={form.dailyDigestEnabled}
+            onChange={set('dailyDigestEnabled')}
+            disabled={!form.emailEnabled}
+          />
+          <Toggle
+            id="weeklySummaryEnabled"
+            label="Weekly summary"
+            help="A Monday report of the week just gone."
+            checked={form.weeklySummaryEnabled}
+            onChange={set('weeklySummaryEnabled')}
+            disabled={!form.emailEnabled}
+          />
+          <Toggle
+            id="criticalAlertsOnly"
+            label="Critical alerts only"
+            help="Suppress warnings and informational emails."
+            checked={form.criticalAlertsOnly}
+            onChange={set('criticalAlertsOnly')}
+            disabled={!form.emailEnabled}
+          />
+        </div>
+
+        <div className="mt-3" style={{ maxWidth: 260 }}>
+          <label className="sp-label" htmlFor="digestHour">
+            Daily digest time (store timezone)
+          </label>
+          <select
+            id="digestHour"
+            className="sp-select"
+            value={form.digestHour}
+            onChange={(e) => set('digestHour')(Number(e.target.value))}
+          >
+            {HOURS.map((h) => (
+              <option key={h} value={h}>
+                {String(h).padStart(2, '0')}:00
+              </option>
+            ))}
+          </select>
+        </div>
+      </div>
+
+      <div className="sp-card sp-card-pad mb-3">
+        <div className="sp-card-title mb-1">In-app and browser</div>
+        <Toggle id="inApp" label="In-app alerts" help="Always on — the alert center is your source of truth." checked disabled onChange={() => {}} />
+        <Toggle
+          id="browserNotificationsEnabled"
+          label="Browser notifications"
+          help="Desktop notifications while StorePulse is open."
+          checked={form.browserNotificationsEnabled}
+          onChange={(value) => (value ? enableBrowserNotifications() : set('browserNotificationsEnabled')(false))}
+        />
+      </div>
+
+      <div className="d-flex align-items-center gap-3">
+        <button type="submit" className="sp-btn sp-btn-primary" disabled={state.saving}>
+          {state.saving ? 'Saving…' : 'Save preferences'}
+        </button>
+        {state.saved && <span className="sp-card-sub" style={{ color: 'var(--sp-success)' }}>Saved</span>}
+        {state.error && <span className="sp-card-sub" style={{ color: 'var(--sp-critical)' }}>{state.error}</span>}
+      </div>
+    </form>
+  );
+}

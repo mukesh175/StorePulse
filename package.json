@@ -1,0 +1,32 @@
+{
+  "name": "storepulse",
+  "version": "1.0.0",
+  "private": true,
+  "description": "StorePulse — Know what needs attention. Every day.",
+  "scripts": {
+    "dev": "next dev",
+    "build": "prisma generate && next build",
+    "start": "next start",
+    "lint": "next lint",
+    "postinstall": "prisma generate",
+    "db:migrate": "prisma migrate dev",
+    "db:deploy": "prisma migrate deploy",
+    "db:studio": "prisma studio"
+  },
+  "dependencies": {
+    "@prisma/client": "^6.2.1",
+    "@shopify/app-bridge": "^3.7.10",
+    "bootstrap": "^5.3.3",
+    "next": "^15.1.6",
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0",
+    "recharts": "^2.15.0",
+    "resend": "^4.1.1"
+  },
+  "devDependencies": {
+    "@eslint/eslintrc": "^3.2.0",
+    "eslint": "^9.18.0",
+    "eslint-config-next": "^15.1.6",
+    "prisma": "^6.2.1"
+  }
+}

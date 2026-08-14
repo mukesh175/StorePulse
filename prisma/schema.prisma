@@ -1,0 +1,333 @@
+// StorePulse — Prisma schema (Neon PostgreSQL)
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+enum AlertStatus {
+  OPEN
+  ACKNOWLEDGED
+  RESOLVED
+  DISMISSED
+}
+
+enum AlertSeverity {
+  CRITICAL
+  WARNING
+  INFO
+  SUCCESS
+}
+
+enum AlertCategory {
+  INVENTORY
+  ORDERS
+  REFUNDS
+  PRODUCTS
+  SALES
+  SYSTEM
+}
+
+enum NotificationChannel {
+  EMAIL
+  IN_APP
+  BROWSER
+}
+
+enum NotificationStatus {
+  QUEUED
+  SENT
+  FAILED
+  SKIPPED
+}
+
+enum BillingPlan {
+  FREE
+  STARTER
+  GROWTH
+  PRO
+}
+
+model Store {
+  id           String    @id @default(cuid())
+  shopDomain   String    @unique
+  shopName     String?
+  accessToken  String
+  email        String?
+  currency     String    @default("USD")
+  timezone     String    @default("UTC")
+  countryCode  String?
+  plan         BillingPlan @default(FREE)
+  isDemo       Boolean   @default(false)
+  onboardedAt  DateTime?
+  lastSyncAt   DateTime?
+  lastSyncError String?
+  installedAt  DateTime  @default(now())
+  uninstalledAt DateTime?
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+
+  products      Product[]
+  orders        Order[]
+  alerts        Alert[]
+  metrics       DailyMetric[]
+  settings      AlertSetting?
+  preference    NotificationPreference?
+  notifications NotificationLog[]
+  webhookEvents WebhookEvent[]
+  inventorySnapshots InventorySnapshot[]
+
+  @@index([uninstalledAt])
+}
+
+model Product {
+  id               String   @id @default(cuid())
+  shopId           String
+  shopifyProductId String
+  title            String
+  handle           String?
+  status           String   @default("ACTIVE")
+  vendor           String?
+  productType      String?
+  imageUrl         String?
+  publishedOnline  Boolean  @default(true)
+  totalInventory   Int      @default(0)
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  store    Store            @relation(fields: [shopId], references: [id], onDelete: Cascade)
+  variants ProductVariant[]
+
+  @@unique([shopId, shopifyProductId])
+  @@index([shopId, status])
+  @@index([shopId, updatedAt])
+}
+
+model ProductVariant {
+  id                 String   @id @default(cuid())
+  productId          String
+  shopifyVariantId   String
+  title              String?
+  sku                String?
+  price              Decimal  @default(0) @db.Decimal(12, 2)
+  compareAtPrice     Decimal? @db.Decimal(12, 2)
+  inventoryItemId    String?
+  inventoryQuantity  Int      @default(0)
+  previousQuantity   Int      @default(0)
+  inventoryPolicy    String   @default("DENY")
+  inventoryTracked   Boolean  @default(true)
+  availableForSale   Boolean  @default(true)
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+
+  product Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  @@unique([productId, shopifyVariantId])
+  @@index([shopifyVariantId])
+  @@index([inventoryItemId])
+  @@index([inventoryQuantity])
+}
+
+model Order {
+  id                String    @id @default(cuid())
+  shopId            String
+  shopifyOrderId    String
+  orderNumber       String
+  customerName      String?
+  customerEmail     String?
+  totalPrice        Decimal   @default(0) @db.Decimal(12, 2)
+  subtotalPrice     Decimal   @default(0) @db.Decimal(12, 2)
+  refundedAmount    Decimal   @default(0) @db.Decimal(12, 2)
+  currency          String    @default("USD")
+  financialStatus   String?
+  fulfillmentStatus String?
+  paymentGateway    String?
+  isCOD             Boolean   @default(false)
+  isCancelled       Boolean   @default(false)
+  lineItemCount     Int       @default(0)
+  processedAt       DateTime?
+  fulfilledAt       DateTime?
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+
+  store      Store       @relation(fields: [shopId], references: [id], onDelete: Cascade)
+  lineItems  OrderLineItem[]
+
+  @@unique([shopId, shopifyOrderId])
+  @@index([shopId, processedAt])
+  @@index([shopId, fulfillmentStatus])
+  @@index([shopId, financialStatus])
+}
+
+model OrderLineItem {
+  id               String  @id @default(cuid())
+  orderId          String
+  shopifyProductId String?
+  shopifyVariantId String?
+  title            String
+  quantity         Int     @default(1)
+  price            Decimal @default(0) @db.Decimal(12, 2)
+
+  order Order @relation(fields: [orderId], references: [id], onDelete: Cascade)
+
+  @@index([orderId])
+  @@index([shopifyProductId])
+}
+
+model Alert {
+  id              String        @id @default(cuid())
+  shopId          String
+  fingerprint     String
+  type            String
+  category        AlertCategory
+  severity        AlertSeverity
+  title           String
+  message         String
+  resourceType    String?
+  resourceId      String?
+  resourceUrl     String?
+  whyItMatters    String?
+  recommendedAction String?
+  metadata        Json?
+  status          AlertStatus   @default(OPEN)
+  occurrences     Int           @default(1)
+  firstDetectedAt DateTime      @default(now())
+  lastDetectedAt  DateTime      @default(now())
+  resolvedAt      DateTime?
+  snoozedUntil    DateTime?
+  notifiedAt      DateTime?
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+
+  store         Store             @relation(fields: [shopId], references: [id], onDelete: Cascade)
+  notifications NotificationLog[]
+
+  @@unique([shopId, fingerprint])
+  @@index([shopId, status, severity])
+  @@index([shopId, category])
+  @@index([shopId, lastDetectedAt])
+}
+
+model DailyMetric {
+  id                 String   @id @default(cuid())
+  shopId             String
+  date               DateTime @db.Date
+  revenue            Decimal  @default(0) @db.Decimal(14, 2)
+  orders             Int      @default(0)
+  averageOrderValue  Decimal  @default(0) @db.Decimal(12, 2)
+  refunds            Int      @default(0)
+  refundAmount       Decimal  @default(0) @db.Decimal(14, 2)
+  unitsSold          Int      @default(0)
+  customers          Int      @default(0)
+  newCustomers       Int      @default(0)
+  returningCustomers Int      @default(0)
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+
+  store Store @relation(fields: [shopId], references: [id], onDelete: Cascade)
+
+  @@unique([shopId, date])
+  @@index([shopId, date])
+}
+
+model AlertSetting {
+  id                    String   @id @default(cuid())
+  shopId                String   @unique
+  lowStockThreshold     Int      @default(10)
+  delayedOrderWarnHours Int      @default(24)
+  delayedOrderCritHours Int      @default(48)
+  salesDropPercent      Int      @default(30)
+  refundSpikePercent    Int      @default(50)
+  inventoryAlertsEnabled Boolean @default(true)
+  orderAlertsEnabled    Boolean  @default(true)
+  refundAlertsEnabled   Boolean  @default(true)
+  salesAlertsEnabled    Boolean  @default(true)
+  productAlertsEnabled  Boolean  @default(true)
+  createdAt             DateTime @default(now())
+  updatedAt             DateTime @updatedAt
+
+  store Store @relation(fields: [shopId], references: [id], onDelete: Cascade)
+}
+
+model NotificationPreference {
+  id                          String   @id @default(cuid())
+  shopId                      String   @unique
+  notifyEmail                 String?
+  emailEnabled                Boolean  @default(true)
+  dailyDigestEnabled          Boolean  @default(true)
+  weeklySummaryEnabled        Boolean  @default(true)
+  instantAlertsEnabled        Boolean  @default(true)
+  criticalAlertsOnly          Boolean  @default(false)
+  browserNotificationsEnabled Boolean  @default(false)
+  digestHour                  Int      @default(8)
+  createdAt                   DateTime @default(now())
+  updatedAt                   DateTime @updatedAt
+
+  store Store @relation(fields: [shopId], references: [id], onDelete: Cascade)
+}
+
+model NotificationLog {
+  id                String              @id @default(cuid())
+  shopId            String
+  alertId           String?
+  channel           NotificationChannel
+  kind              String              @default("ALERT")
+  status            NotificationStatus  @default(QUEUED)
+  subject           String?
+  sentAt            DateTime?
+  providerMessageId String?
+  errorMessage      String?
+  dedupeKey         String?
+  createdAt         DateTime            @default(now())
+
+  store Store  @relation(fields: [shopId], references: [id], onDelete: Cascade)
+  alert Alert? @relation(fields: [alertId], references: [id], onDelete: SetNull)
+
+  @@unique([shopId, dedupeKey])
+  @@index([shopId, createdAt])
+}
+
+model WebhookEvent {
+  id          String    @id @default(cuid())
+  shopId      String?
+  shopDomain  String
+  topic       String
+  eventId     String
+  payload     Json
+  processed   Boolean   @default(false)
+  processedAt DateTime?
+  error       String?
+  attempts    Int       @default(0)
+  createdAt   DateTime  @default(now())
+
+  store Store? @relation(fields: [shopId], references: [id], onDelete: Cascade)
+
+  @@unique([shopDomain, topic, eventId])
+  @@index([processed, createdAt])
+}
+
+model InventorySnapshot {
+  id              String   @id @default(cuid())
+  shopId          String
+  inventoryItemId String
+  available       Int
+  recordedAt      DateTime @default(now())
+
+  store Store @relation(fields: [shopId], references: [id], onDelete: Cascade)
+
+  @@index([shopId, inventoryItemId, recordedAt])
+}
+
+model OAuthState {
+  id         String   @id @default(cuid())
+  state      String   @unique
+  shopDomain String
+  createdAt  DateTime @default(now())
+
+  @@index([createdAt])
+}
