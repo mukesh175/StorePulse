@@ -221,6 +221,24 @@ Every request is HMAC-verified before anything else happens. Verified events are
 with a unique `(shopDomain, topic, eventId)` key, so Shopify's at-least-once redelivery is a no-op. Handlers do
 database work only — no Shopify API calls happen inside the webhook request path.
 
+### Mandatory privacy webhooks
+
+`customers/data_request`, `customers/redact` and `shop/redact` are declared in `shopify.app.toml` and handled by
+the same verified endpoint. `customers/redact` nulls the customer name and email on mirrored orders (the
+numbers that feed metrics stay intact); `shop/redact` deletes the `Store` row, which cascades to every related
+table.
+
+### App configuration (`shopify.app.toml`)
+
+The Shopify CLI needs this file to exist before `shopify app deploy` will run. It carries the client ID, app
+URL, scopes, redirect URL and the privacy webhook endpoints. Note that `shopify app deploy` pushes *this
+configuration* to the Partner dashboard — it does **not** deploy the Next.js app itself. That is `vercel --prod`.
+If your deployed domain changes, update `application_url` and the URLs under `[auth]` and
+`[webhooks.privacy_compliance]`, then re-run the deploy.
+
+The business webhooks (orders, products, inventory, refunds, uninstall) are registered per-shop at OAuth time
+via the Admin GraphQL API in `lib/shopify/webhooks.js`, not declared in the TOML.
+
 Test with the Shopify CLI:
 
 ```bash

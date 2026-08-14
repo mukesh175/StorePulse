@@ -1,0 +1,33 @@
+# StorePulse — Shopify app configuration
+# Pushed to the Partner dashboard with `shopify app deploy`.
+# Docs: https://shopify.dev/docs/apps/build/cli-for-apps/app-configuration
+
+client_id = "290fb9d90e00854a600ed8edacf64c0f"
+name = "StorePulse"
+handle = "storepulse-store-alert"
+application_url = "https://store-pulse-chi.vercel.app"
+embedded = true
+
+[access_scopes]
+scopes = "read_products,read_orders,read_inventory,read_customers,read_locations"
+
+[auth]
+redirect_urls = [
+  "https://store-pulse-chi.vercel.app/api/auth/callback"
+]
+
+[webhooks]
+api_version = "2025-01"
+
+  # Mandatory privacy webhooks. Handled by the shared verified endpoint in
+  # app/api/webhooks/[topic]/route.js, which dispatches on the X-Shopify-Topic
+  # header rather than the path.
+  [webhooks.privacy_compliance]
+  customer_data_request_url = "https://store-pulse-chi.vercel.app/api/webhooks/customers-data-request"
+  customer_deletion_url = "https://store-pulse-chi.vercel.app/api/webhooks/customers-redact"
+  shop_deletion_url = "https://store-pulse-chi.vercel.app/api/webhooks/shop-redact"
+
+[pos]
+embedded = false
+
+[build]

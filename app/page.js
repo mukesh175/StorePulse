@@ -1,18 +1,28 @@
 import { redirect } from 'next/navigation';
 import { getCurrentStore } from '@/lib/shopify/session';
+import { normalizeShopDomain } from '@/lib/shopify/auth';
 import InstallForm from '@/components/InstallForm';
+import ExitIframe from '@/components/ExitIframe';
 
 export const dynamic = 'force-dynamic';
 
 export default async function HomePage({ searchParams }) {
   const params = await searchParams;
+  const shopDomain = normalizeShopDomain(params?.shop);
+  const store = await getCurrentStore();
 
-  // Shopify links merchants here with ?shop= — send them straight into OAuth.
-  if (params?.shop) {
-    redirect(`/api/auth?${new URLSearchParams(params).toString()}`);
+  // Shopify loads the app's URL with ?shop=&host=. If this browser already has
+  // a valid session for that same shop, go straight in.
+  if (shopDomain) {
+    if (store && store.shopDomain === shopDomain) {
+      redirect(store.onboardedAt ? '/dashboard' : '/onboarding');
+    }
+
+    // Otherwise start OAuth. Shopify's authorize screen cannot render inside
+    // the admin iframe, so break out to the top window instead of redirecting.
+    return <ExitIframe url={`/api/auth?${new URLSearchParams(params).toString()}`} />;
   }
 
-  const store = await getCurrentStore();
   if (store) redirect(store.onboardedAt ? '/dashboard' : '/onboarding');
 
   const demoMode = process.env.DEMO_MODE === 'true';
