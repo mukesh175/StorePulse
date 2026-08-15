@@ -192,9 +192,24 @@ export default function NotificationForm({ initial }) {
         )}
       </div>
       <div className="sp-help mt-2">
-        The test sends a real copy of your daily brief through Resend, so a success confirms your API key,
-        verified domain and recipient address all work. Delivery is recorded below.
+        The test sends a real copy of your daily brief, so a success confirms your API key, sending domain and
+        recipient address all work. Delivery is recorded below.
       </div>
+
+      {test.ok && (
+        <div className="sp-banner info mt-3">
+          <span aria-hidden="true">📬</span>
+          <div>
+            <strong>Not in your inbox? Check your spam or junk folder.</strong>
+            <div className="mt-1">
+              If you find it there, open it and choose <strong>Report not spam</strong> (Gmail) or{' '}
+              <strong>Mark as not junk</strong> (Outlook), then add the sender to your contacts. That teaches your
+              mail provider to deliver future StorePulse alerts to the inbox — worth doing now, so you don&apos;t
+              miss a critical alert later.
+            </div>
+          </div>
+        </div>
+      )}
     </form>
   );
 }

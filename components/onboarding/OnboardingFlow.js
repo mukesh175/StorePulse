@@ -266,6 +266,19 @@ export default function OnboardingFlow({ store }) {
             </div>
           </div>
 
+          {prefs.emailEnabled && (
+            <div className="sp-banner info mt-3">
+              <span aria-hidden="true">📬</span>
+              <div>
+                <strong>Watch your spam folder for the first email.</strong>
+                <div className="mt-1">
+                  New senders often land there. If StorePulse does, mark it <strong>not spam</strong> so critical
+                  alerts reach your inbox.
+                </div>
+              </div>
+            </div>
+          )}
+
           <button className="sp-btn sp-btn-primary w-100 mt-4" onClick={finish} disabled={finishing}>
             {finishing ? 'Finishing…' : 'Go to my dashboard'}
           </button>
