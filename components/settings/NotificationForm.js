@@ -72,6 +72,21 @@ export default function NotificationForm({ initial }) {
     }
   }
 
+  function testBrowserNotification() {
+    if (typeof window === 'undefined' || !('Notification' in window)) {
+      setState((s) => ({ ...s, error: 'This browser does not support notifications' }));
+      return;
+    }
+    if (Notification.permission !== 'granted') {
+      setState((s) => ({ ...s, error: 'Browser notifications are blocked in your browser settings' }));
+      return;
+    }
+    new Notification('🔴 StorePulse test notification', {
+      body: 'This is what a critical alert will look like.',
+      icon: '/icon.svg',
+    });
+  }
+
   async function enableBrowserNotifications() {
     if (typeof window === 'undefined' || !('Notification' in window)) {
       setState((s) => ({ ...s, error: 'This browser does not support notifications' }));
@@ -170,10 +185,18 @@ export default function NotificationForm({ initial }) {
         <Toggle
           id="browserNotificationsEnabled"
           label="Browser notifications"
-          help="Desktop notifications while StorePulse is open."
+          help="Desktop notifications for new critical and warning alerts while StorePulse is open in a tab. Checked once a minute."
           checked={form.browserNotificationsEnabled}
           onChange={(value) => (value ? enableBrowserNotifications() : set('browserNotificationsEnabled')(false))}
         />
+        {form.browserNotificationsEnabled && (
+          <div className="d-flex align-items-center gap-2 pt-2">
+            <button type="button" className="sp-btn sp-btn-sm" onClick={testBrowserNotification}>
+              Show a test notification
+            </button>
+            <span className="sp-card-sub">Save your preferences to start receiving them.</span>
+          </div>
+        )}
       </div>
 
       <div className="d-flex align-items-center gap-3 flex-wrap">

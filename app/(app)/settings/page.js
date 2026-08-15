@@ -2,7 +2,7 @@ import { redirect } from 'next/navigation';
 import { getCurrentStore } from '@/lib/shopify/session';
 import { getAlertSettings } from '@/lib/alerts/scan';
 import { getPreferences } from '@/lib/notifications/dispatch';
-import { PLANS, BILLING_ENABLED, planFor } from '@/lib/billing';
+import { planFor, historyWindowDays } from '@/lib/billing';
 import AlertSettingsForm from '@/components/settings/AlertSettingsForm';
 import { PageHeader, Card, Section } from '@/components/ui/Primitives';
 import { formatDate } from '@/lib/utils/format';
@@ -73,36 +73,24 @@ export default async function SettingsPage() {
         />
       </Section>
 
-      <Section title="Plan" sub={BILLING_ENABLED ? 'Your current subscription.' : 'Billing is not enabled yet — every feature is available.'}>
-        <div className="row g-3">
-          {Object.values(PLANS).map((plan) => (
-            <div className="col-12 col-md-6 col-xl-3" key={plan.id}>
-              <div
-                className="sp-card sp-card-pad h-100"
-                style={plan.id === currentPlan.id ? { borderColor: 'var(--sp-brand)' } : undefined}
-              >
-                <div className="d-flex align-items-center justify-content-between">
-                  <strong>{plan.name}</strong>
-                  {plan.id === currentPlan.id && <span className="sp-pill info">Current</span>}
-                </div>
-                <div className="sp-metric-value" style={{ fontSize: 22 }}>
-                  {plan.price === 0 ? 'Free' : `$${plan.price}`}
-                  {plan.price > 0 && <span className="sp-card-sub"> /month</span>}
-                </div>
-                <ul className="sp-card-sub mt-2 mb-0" style={{ paddingLeft: 18 }}>
-                  {plan.features.map((feature) => (
-                    <li key={feature}>{feature}</li>
-                  ))}
-                </ul>
+      <Section title="Plan" sub="Your subscription and what it unlocks.">
+        <Card>
+          <div className="d-flex flex-wrap align-items-center justify-content-between gap-3">
+            <div>
+              <div className="d-flex align-items-center gap-2">
+                <strong style={{ fontSize: 16 }}>{currentPlan.name}</strong>
+                <span className="sp-pill info">Current plan</span>
+              </div>
+              <div className="sp-card-sub mt-1">
+                {currentPlan.price === 0 ? 'No charge' : `$${currentPlan.price} per month`} ·{' '}
+                {historyWindowDays(store)} days of reporting history
               </div>
             </div>
-          ))}
-        </div>
-        {!BILLING_ENABLED && (
-          <div className="sp-help mt-2">
-            Plan selection is intentionally inactive in this version — no charge is ever created.
+            <Link href="/plan" className="sp-btn sp-btn-primary">
+              {currentPlan.id === 'PRO' ? 'Manage plan' : 'Compare & upgrade'}
+            </Link>
           </div>
-        )}
+        </Card>
       </Section>
     </div>
   );

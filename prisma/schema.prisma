@@ -69,6 +69,11 @@ model Store {
   timezone     String    @default("UTC")
   countryCode  String?
   plan         BillingPlan @default(FREE)
+  /// Shopify AppSubscription GID and its last known status. The subscription
+  /// itself lives in Shopify — these are a local cache for rendering.
+  subscriptionId     String?
+  subscriptionStatus String?
+  planActivatedAt    DateTime?
   isDemo       Boolean   @default(false)
   onboardedAt  DateTime?
   lastSyncAt   DateTime?

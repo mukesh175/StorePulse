@@ -12,6 +12,7 @@ export const NAV_ITEMS = [
   { href: '/reports', label: 'Reports', icon: '📈' },
   { href: '/notifications', label: 'Notifications', icon: '🔔' },
   { href: '/settings', label: 'Settings', icon: '⚙' },
+  { href: '/plan', label: 'Plan', icon: '✦' },
 ];
 
 const MOBILE_ITEMS = NAV_ITEMS.filter((i) =>

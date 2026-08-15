@@ -1,5 +1,7 @@
+import Link from 'next/link';
 import { redirect } from 'next/navigation';
 import { getCurrentStore } from '@/lib/shopify/session';
+import { historyWindowDays } from '@/lib/billing';
 import { getMetricSeries } from '@/lib/metrics';
 import { buildWeeklySummary, getTopProducts, getAlertTrend } from '@/lib/reports';
 import { RevenueChart, OrdersChart, RefundsChart, AlertTrendChart } from '@/components/charts/Charts';
@@ -12,18 +14,34 @@ export default async function ReportsPage() {
   const store = await getCurrentStore();
   if (!store) redirect('/');
 
+  // Reporting history is a plan entitlement — the Free plan sees 7 days.
+  const historyDays = historyWindowDays(store);
+  const chartDays = Math.min(30, historyDays);
+  const productDays = Math.min(30, historyDays);
+  const trendDays = Math.min(14, historyDays);
+
   const [series30, summary, topProducts, alertTrend] = await Promise.all([
-    getMetricSeries(store, 30),
+    getMetricSeries(store, chartDays),
     buildWeeklySummary(store),
-    getTopProducts(store, { days: 30, limit: 10 }),
-    getAlertTrend(store, 14),
+    getTopProducts(store, { days: productDays, limit: 10 }),
+    getAlertTrend(store, trendDays),
   ]);
 
   const hasData = series30.some((d) => d.orders > 0);
 
   return (
     <div className="sp-fade-in">
-      <PageHeader title="Reports" subtitle="Last 7 days compared with the 7 days before, plus 30-day trends" />
+      <PageHeader
+        title="Reports"
+        subtitle={`Last 7 days compared with the 7 days before, plus ${chartDays}-day trends`}
+        actions={
+          historyDays < 90 ? (
+            <Link href="/plan" className="sp-btn sp-btn-sm">
+              {historyDays} days of history · Upgrade for more
+            </Link>
+          ) : null
+        }
+      />
 
       {!hasData ? (
         <EmptyState
@@ -65,21 +83,21 @@ export default async function ReportsPage() {
             <div className="col-12 col-xl-7">
               <Card>
                 <div className="sp-card-title">Revenue</div>
-                <div className="sp-card-sub mb-2">Last 30 days</div>
+                <div className="sp-card-sub mb-2">Last {chartDays} days</div>
                 <RevenueChart data={series30} currency={store.currency} height={240} />
               </Card>
             </div>
             <div className="col-12 col-xl-5">
               <Card>
                 <div className="sp-card-title">Orders</div>
-                <div className="sp-card-sub mb-2">Last 30 days</div>
+                <div className="sp-card-sub mb-2">Last {chartDays} days</div>
                 <OrdersChart data={series30} height={240} />
               </Card>
             </div>
             <div className="col-12 col-xl-6">
               <Card>
                 <div className="sp-card-title">Refunds</div>
-                <div className="sp-card-sub mb-2">Last 30 days</div>
+                <div className="sp-card-sub mb-2">Last {chartDays} days</div>
                 <RefundsChart data={series30} currency={store.currency} height={220} />
               </Card>
             </div>
@@ -94,7 +112,7 @@ export default async function ReportsPage() {
 
           <Card className="mt-3">
             <div className="sp-card-title mb-1">Top products</div>
-            <div className="sp-card-sub mb-3">By units sold in the last 30 days</div>
+            <div className="sp-card-sub mb-3">By units sold in the last {productDays} days</div>
             <div className="sp-table-wrap">
               <table className="sp-table">
                 <thead>
