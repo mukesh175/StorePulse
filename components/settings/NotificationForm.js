@@ -28,6 +28,26 @@ function Toggle({ id, label, help, checked, onChange, disabled }) {
 export default function NotificationForm({ initial }) {
   const [form, setForm] = useState(initial);
   const [state, setState] = useState({ saving: false, saved: false, error: null });
+  const [test, setTest] = useState({ sending: false, ok: false, result: null });
+
+  async function sendTest() {
+    setTest({ sending: true, ok: false, result: null });
+    try {
+      // Save first, so the test uses the address currently in the form.
+      await fetch('/api/notifications/preferences', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(form),
+      });
+
+      const res = await fetch('/api/notifications/test', { method: 'POST' });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'The email could not be sent.');
+      setTest({ sending: false, ok: true, result: `Sent to ${data.to}` });
+    } catch (error) {
+      setTest({ sending: false, ok: false, result: error.message });
+    }
+  }
 
   const set = (key) => (value) => {
     setForm((prev) => ({ ...prev, [key]: value }));
@@ -156,12 +176,24 @@ export default function NotificationForm({ initial }) {
         />
       </div>
 
-      <div className="d-flex align-items-center gap-3">
+      <div className="d-flex align-items-center gap-3 flex-wrap">
         <button type="submit" className="sp-btn sp-btn-primary" disabled={state.saving}>
           {state.saving ? 'Saving…' : 'Save preferences'}
         </button>
+        <button type="button" className="sp-btn" onClick={sendTest} disabled={test.sending}>
+          {test.sending ? 'Sending…' : 'Send test email'}
+        </button>
         {state.saved && <span className="sp-card-sub" style={{ color: 'var(--sp-success)' }}>Saved</span>}
         {state.error && <span className="sp-card-sub" style={{ color: 'var(--sp-critical)' }}>{state.error}</span>}
+        {test.result && (
+          <span className="sp-card-sub" style={{ color: test.ok ? 'var(--sp-success)' : 'var(--sp-critical)' }}>
+            {test.result}
+          </span>
+        )}
+      </div>
+      <div className="sp-help mt-2">
+        The test sends a real copy of your daily brief through Resend, so a success confirms your API key,
+        verified domain and recipient address all work. Delivery is recorded below.
       </div>
     </form>
   );
