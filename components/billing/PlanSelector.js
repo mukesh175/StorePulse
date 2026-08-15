@@ -2,6 +2,7 @@
 
 import { useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
+import { fetchJson } from '@/lib/utils/fetchJson';
 
 export default function PlanSelector({ plans, planOrder, currentPlan, isDemo }) {
   const router = useRouter();
@@ -16,13 +17,11 @@ export default function PlanSelector({ plans, planOrder, currentPlan, isDemo }) 
     setError(null);
 
     try {
-      const res = await fetch('/api/billing/subscribe', {
+      const data = await fetchJson('/api/billing/subscribe', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ plan: planId }),
       });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || 'Could not change your plan.');
 
       if (data.confirmationUrl) {
         // Shopify's approval screen cannot render inside the admin iframe.

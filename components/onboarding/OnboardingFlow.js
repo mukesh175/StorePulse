@@ -71,7 +71,7 @@ export default function OnboardingFlow({ store }) {
   async function finish() {
     setFinishing(true);
     try {
-      await fetch('/api/notifications/preferences', {
+      await fetchJson('/api/notifications/preferences', {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -81,7 +81,7 @@ export default function OnboardingFlow({ store }) {
           browserNotificationsEnabled: prefs.browserNotificationsEnabled,
         }),
       });
-      await fetch('/api/onboarding', { method: 'POST' });
+      await fetchJson('/api/onboarding', { method: 'POST' });
     } finally {
       router.push('/dashboard');
     }

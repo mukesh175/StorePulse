@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import { fetchJson } from '@/lib/utils/fetchJson';
 
 const HOURS = Array.from({ length: 24 }, (_, h) => h);
 
@@ -34,15 +35,13 @@ export default function NotificationForm({ initial }) {
     setTest({ sending: true, ok: false, result: null });
     try {
       // Save first, so the test uses the address currently in the form.
-      await fetch('/api/notifications/preferences', {
+      await fetchJson('/api/notifications/preferences', {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(form),
       });
 
-      const res = await fetch('/api/notifications/test', { method: 'POST' });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || 'The email could not be sent.');
+      const data = await fetchJson('/api/notifications/test', { method: 'POST' });
       setTest({ sending: false, ok: true, result: `Sent to ${data.to}` });
     } catch (error) {
       setTest({ sending: false, ok: false, result: error.message });
@@ -58,13 +57,11 @@ export default function NotificationForm({ initial }) {
     event.preventDefault();
     setState({ saving: true, saved: false, error: null });
     try {
-      const res = await fetch('/api/notifications/preferences', {
+      const data = await fetchJson('/api/notifications/preferences', {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(form),
       });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || 'Could not save your preferences');
       setForm((prev) => ({ ...prev, ...data.preferences }));
       setState({ saving: false, saved: true, error: null });
     } catch (error) {

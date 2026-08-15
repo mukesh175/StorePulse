@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useRef } from 'react';
+import { fetchJson } from '@/lib/utils/fetchJson';
 
 const POLL_MS = 60_000;
 const STORAGE_KEY = 'storepulse:lastNotifiedAt';
@@ -26,10 +27,7 @@ export default function BrowserNotifier({ enabled }) {
       try {
         const since = window.localStorage.getItem(STORAGE_KEY);
         const url = since ? `/api/alerts/recent?since=${encodeURIComponent(since)}` : '/api/alerts/recent';
-        const res = await fetch(url);
-        if (!res.ok) return;
-
-        const data = await res.json();
+        const data = await fetchJson(url);
         if (cancelled) return;
 
         // On the very first run just record the position — the merchant does

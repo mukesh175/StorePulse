@@ -6,7 +6,6 @@ import { SidebarNav, MobileNav } from '@/components/navigation/NavLinks';
 import SyncButton from '@/components/ui/SyncButton';
 import ReconnectBanner from '@/components/ui/ReconnectBanner';
 import { needsReconnect } from '@/lib/shopify/token';
-import AppBridgeScript from '@/components/AppBridgeScript';
 import BrowserNotifier from '@/components/notifications/BrowserNotifier';
 import { timeAgo } from '@/lib/utils/format';
 
@@ -21,7 +20,6 @@ export default async function AppLayout({ children }) {
 
   return (
     <div className="sp-shell">
-      <AppBridgeScript />
       <BrowserNotifier enabled={browserNotifications} />
 
       <aside className="sp-sidebar">
