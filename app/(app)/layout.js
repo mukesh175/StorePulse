@@ -4,6 +4,8 @@ import { getCurrentStore } from '@/lib/shopify/session';
 import { getAlertCounts } from '@/lib/health';
 import { SidebarNav, MobileNav } from '@/components/navigation/NavLinks';
 import SyncButton from '@/components/ui/SyncButton';
+import ReconnectBanner from '@/components/ui/ReconnectBanner';
+import { needsReconnect } from '@/lib/shopify/token';
 import AppBridgeScript from '@/components/AppBridgeScript';
 import { timeAgo } from '@/lib/utils/format';
 
@@ -56,7 +58,10 @@ export default async function AppLayout({ children }) {
           </div>
         </header>
 
-        <main className="sp-content">{children}</main>
+        <main className="sp-content">
+          {needsReconnect(store) && <ReconnectBanner shopDomain={store.shopDomain} />}
+          {children}
+        </main>
       </div>
 
       <MobileNav />
