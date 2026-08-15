@@ -1,6 +1,15 @@
 import { redirect } from 'next/navigation';
 import { getCurrentStore } from '@/lib/shopify/session';
-import { PLANS, PLAN_ORDER, planFor, historyWindowDays, hasFeature, FEATURES, BILLING_ENABLED } from '@/lib/billing';
+import {
+  PLANS,
+  PLAN_ORDER,
+  planFor,
+  historyWindowDays,
+  alertHistoryDays,
+  hasFeature,
+  FEATURES,
+  BILLING_ENABLED,
+} from '@/lib/billing';
 import PlanSelector from '@/components/billing/PlanSelector';
 import { PageHeader, Card, Section } from '@/components/ui/Primitives';
 import { formatDate } from '@/lib/utils/format';
@@ -22,6 +31,7 @@ export default async function PlanPage({ searchParams }) {
   const params = await searchParams;
   const plan = planFor(store);
   const historyDays = historyWindowDays(store);
+  const alertDays = alertHistoryDays(store);
 
   return (
     <div className="sp-fade-in" style={{ maxWidth: 1100 }}>
@@ -58,6 +68,13 @@ export default async function PlanPage({ searchParams }) {
           <div className="sp-kv">
             <span className="sp-kv-label">Reporting history</span>
             <span className="sp-kv-value">{historyDays} days</span>
+          </div>
+          <div className="sp-kv">
+            <span className="sp-kv-label">
+              Alert history
+              <div className="sp-help">How far back the alert center lists alerts</div>
+            </span>
+            <span className="sp-kv-value">{alertDays ? `${alertDays} days` : 'Unlimited'}</span>
           </div>
           <div className="sp-kv">
             <span className="sp-kv-label">Daily digest</span>

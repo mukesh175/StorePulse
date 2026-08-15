@@ -5,6 +5,8 @@ import { getCurrentStore } from '@/lib/shopify/session';
 import { listAlerts, getAlertFacets } from '@/lib/alerts/queries';
 import AlertCard from '@/components/alerts/AlertCard';
 import AlertFilters from '@/components/alerts/AlertFilters';
+import UpgradePrompt from '@/components/billing/UpgradePrompt';
+import { alertHistoryDays, hasFeature, FEATURES } from '@/lib/billing';
 import { PageHeader, EmptyState } from '@/components/ui/Primitives';
 
 export const dynamic = 'force-dynamic';
@@ -16,6 +18,8 @@ export default async function AlertsPage({ searchParams }) {
   const params = await searchParams;
   const page = Number.parseInt(params?.page ?? '1', 10) || 1;
 
+  const historyDays = alertHistoryDays(store);
+
   const [{ items, total, pages }, facets] = await Promise.all([
     listAlerts(store.id, {
       severity: params?.severity,
@@ -23,9 +27,16 @@ export default async function AlertsPage({ searchParams }) {
       status: params?.status ?? 'ACTIVE',
       page,
       pageSize: 20,
+      historyDays,
     }),
-    getAlertFacets(store.id),
+    getAlertFacets(store.id, { historyDays }),
   ]);
+
+  // Only worth prompting when the merchant actually has critical alerts that
+  // waited for the digest instead of being emailed.
+  const missedInstant =
+    !hasFeature(store, FEATURES.INSTANT_EMAIL) &&
+    items.some((a) => a.severity === 'CRITICAL' && a.status === 'OPEN');
 
   const query = new URLSearchParams(
     Object.entries(params ?? {}).filter(([key]) => key !== 'page')
@@ -37,6 +48,8 @@ export default async function AlertsPage({ searchParams }) {
         title="Alert center"
         subtitle={`${facets.active} active alert${facets.active === 1 ? '' : 's'} · ${facets.resolved} resolved`}
       />
+
+      {missedInstant && <UpgradePrompt variant="list" />}
 
       <Suspense fallback={<div className="sp-skeleton" style={{ height: 76 }} />}>
         <AlertFilters facets={facets} />

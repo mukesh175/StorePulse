@@ -4,6 +4,8 @@ import prisma from '@/lib/prisma';
 import { getCurrentStore } from '@/lib/shopify/session';
 import { getAlert } from '@/lib/alerts/queries';
 import { logCustomerDataViewed } from '@/lib/audit';
+import UpgradePrompt from '@/components/billing/UpgradePrompt';
+import { hasFeature, FEATURES } from '@/lib/billing';
 import AlertActions from '@/components/alerts/AlertActions';
 import { SeverityPill, StatusPill, Card } from '@/components/ui/Primitives';
 import { formatMoney, timeAgo, titleCase } from '@/lib/utils/format';
@@ -66,6 +68,14 @@ export default async function AlertDetailPage({ params }) {
           <span className="sp-pill neutral">Snoozed until {alert.snoozedUntil.toLocaleString()}</span>
         )}
       </div>
+
+      {alert.severity === 'CRITICAL' && !alert.notifiedAt && !hasFeature(store, FEATURES.INSTANT_EMAIL) && (
+        <UpgradePrompt
+          variant="detail"
+          detectedAt={alert.firstDetectedAt}
+          digestHour={store.preference?.digestHour ?? 8}
+        />
+      )}
 
       <h1 style={{ fontSize: 24 }}>{alert.title}</h1>
       <p className="mt-2" style={{ fontSize: 15, color: 'var(--sp-ink-2)' }}>
