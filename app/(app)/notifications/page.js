@@ -1,5 +1,7 @@
+import Link from 'next/link';
 import { redirect } from 'next/navigation';
 import prisma from '@/lib/prisma';
+import { listDataAccessLogs } from '@/lib/audit';
 import { getCurrentStore } from '@/lib/shopify/session';
 import { getPreferences } from '@/lib/notifications/dispatch';
 import NotificationForm from '@/components/settings/NotificationForm';
@@ -15,6 +17,7 @@ export default async function NotificationsPage() {
   if (!store) redirect('/');
 
   const preferences = await getPreferences(store);
+  const accessLogs = await listDataAccessLogs(store.id, { take: 25 });
   const logs = await prisma.notificationLog.findMany({
     where: { shopId: store.id },
     orderBy: { createdAt: 'desc' },
@@ -86,6 +89,54 @@ export default async function NotificationsPage() {
             </div>
           </Card>
         )}
+      </Section>
+
+      <Section
+        title="Data access log"
+        sub="Every read of customer name or email, whether by you or by an automated sync. The log records that access happened — never the data itself."
+      >
+        {accessLogs.length === 0 ? (
+          <EmptyState
+            emoji="🔒"
+            title="No customer data accessed yet"
+            text="Entries appear when you open a screen showing customer details, or when a sync imports orders."
+          />
+        ) : (
+          <Card pad={false}>
+            <div className="sp-table-wrap">
+              <table className="sp-table">
+                <thead>
+                  <tr>
+                    <th>Action</th>
+                    <th>Resource</th>
+                    <th>Records</th>
+                    <th>By</th>
+                    <th>Context</th>
+                    <th>When</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {accessLogs.map((log) => (
+                    <tr key={log.id}>
+                      <td>
+                        <span className="sp-pill neutral">{log.action}</span>
+                      </td>
+                      <td>{titleCase(log.resourceType)}</td>
+                      <td className="sp-num">{log.recordCount}</td>
+                      <td className="sp-card-sub">{titleCase(log.actor)}</td>
+                      <td className="sp-card-sub">{log.context || '—'}</td>
+                      <td className="sp-card-sub">{timeAgo(log.createdAt)}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </Card>
+        )}
+        <div className="sp-help mt-2">
+          See our <Link href="/privacy">privacy policy</Link>, <Link href="/terms">data processing agreement</Link>{' '}
+          and <Link href="/security">security practices</Link>.
+        </div>
       </Section>
     </div>
   );

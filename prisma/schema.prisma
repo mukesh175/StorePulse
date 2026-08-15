@@ -81,6 +81,7 @@ model Store {
   notifications NotificationLog[]
   webhookEvents WebhookEvent[]
   inventorySnapshots InventorySnapshot[]
+  dataAccessLogs DataAccessLog[]
 
   @@index([uninstalledAt])
 }
@@ -321,6 +322,25 @@ model InventorySnapshot {
   store Store @relation(fields: [shopId], references: [id], onDelete: Cascade)
 
   @@index([shopId, inventoryItemId, recordedAt])
+}
+
+/// Access log for reads of protected customer data (name / email).
+/// Required to answer "do you log access to personal data?" truthfully.
+/// Deliberately records *what* was accessed and by whom — never the values.
+model DataAccessLog {
+  id           String   @id @default(cuid())
+  shopId       String
+  action       String
+  resourceType String
+  recordCount  Int      @default(0)
+  fields       String[]
+  actor        String   @default("MERCHANT")
+  context      String?
+  createdAt    DateTime @default(now())
+
+  store Store @relation(fields: [shopId], references: [id], onDelete: Cascade)
+
+  @@index([shopId, createdAt])
 }
 
 model OAuthState {

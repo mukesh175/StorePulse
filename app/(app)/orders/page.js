@@ -3,6 +3,7 @@ import { redirect } from 'next/navigation';
 import prisma from '@/lib/prisma';
 import { getCurrentStore } from '@/lib/shopify/session';
 import { getAlertSettings } from '@/lib/alerts/scan';
+import { logCustomerDataViewed } from '@/lib/audit';
 import { PageHeader, EmptyState } from '@/components/ui/Primitives';
 import { formatMoney, hoursSince, timeAgo } from '@/lib/utils/format';
 import { orderAdminUrl } from '@/lib/shopify/urls';
@@ -54,6 +55,9 @@ export default async function OrdersPage({ searchParams }) {
   ]);
 
   const pages = Math.max(1, Math.ceil(total / PAGE_SIZE));
+
+  // This screen renders customer names and emails — record the access.
+  await logCustomerDataViewed(store.id, 'ORDER', orders.length, `Orders page (filter: ${filter})`);
 
   return (
     <div className="sp-fade-in">

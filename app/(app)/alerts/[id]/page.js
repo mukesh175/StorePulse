@@ -3,6 +3,7 @@ import { notFound, redirect } from 'next/navigation';
 import prisma from '@/lib/prisma';
 import { getCurrentStore } from '@/lib/shopify/session';
 import { getAlert } from '@/lib/alerts/queries';
+import { logCustomerDataViewed } from '@/lib/audit';
 import AlertActions from '@/components/alerts/AlertActions';
 import { SeverityPill, StatusPill, Card } from '@/components/ui/Primitives';
 import { formatMoney, timeAgo, titleCase } from '@/lib/utils/format';
@@ -28,6 +29,11 @@ export default async function AlertDetailPage({ params }) {
   if (!alert) notFound();
 
   const metadata = alert.metadata || {};
+
+  // Delayed-order alerts carry the customer's name and email in metadata.
+  if (metadata.customerName || metadata.customerEmail) {
+    await logCustomerDataViewed(store.id, 'ALERT', 1, `Alert detail (${alert.type})`);
+  }
 
   // "Last sale" context makes the sold-out story concrete.
   let lastSale = null;

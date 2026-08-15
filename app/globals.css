@@ -327,6 +327,14 @@ a:hover { color: var(--sp-brand-dark); }
 .sp-banner.info { background: var(--sp-info-soft); border-color: #b2ddff; color: #194185; }
 .sp-banner.success { background: var(--sp-success-soft); border-color: #aaf0c4; color: #074d31; }
 
+.sp-legal-body ul, .sp-legal-body ol { padding-left: 20px; margin-bottom: 12px; }
+.sp-legal-body li { margin-bottom: 6px; }
+.sp-legal-body p { margin-bottom: 12px; }
+.sp-legal-body code {
+  background: var(--sp-line-soft); border: 1px solid var(--sp-line);
+  border-radius: 5px; padding: 1px 5px; font-size: 13px; color: var(--sp-ink);
+}
+
 .sp-mobile-nav { display: none; }
 
 @media (max-width: 991.98px) {

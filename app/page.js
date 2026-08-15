@@ -1,3 +1,4 @@
+import Link from 'next/link';
 import { redirect } from 'next/navigation';
 import { getCurrentStore } from '@/lib/shopify/session';
 import { normalizeShopDomain } from '@/lib/shopify/auth';
@@ -64,6 +65,12 @@ export default async function HomePage({ searchParams }) {
               </div>
             </div>
           ))}
+        </div>
+
+        <div className="d-flex gap-3 mt-4 sp-card-sub flex-wrap">
+          <Link href="/privacy">Privacy policy</Link>
+          <Link href="/terms">Terms &amp; data processing</Link>
+          <Link href="/security">Security</Link>
         </div>
       </div>
     </main>
