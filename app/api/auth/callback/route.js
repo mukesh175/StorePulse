@@ -44,19 +44,20 @@ export async function GET(request) {
     return NextResponse.json({ error: 'Could not complete installation with Shopify.' }, { status: 502 });
   }
 
+  const now = Date.now();
+  const tokenFields = {
+    accessToken: tokenResponse.access_token,
+    tokenExpiresAt: tokenResponse.expires_in ? new Date(now + tokenResponse.expires_in * 1000) : null,
+    refreshToken: tokenResponse.refresh_token ?? null,
+    refreshTokenExpiresAt: tokenResponse.refresh_token_expires_in
+      ? new Date(now + tokenResponse.refresh_token_expires_in * 1000)
+      : null,
+  };
+
   const store = await prisma.store.upsert({
     where: { shopDomain },
-    create: {
-      shopDomain,
-      accessToken: tokenResponse.access_token,
-      installedAt: new Date(),
-    },
-    update: {
-      accessToken: tokenResponse.access_token,
-      uninstalledAt: null,
-      installedAt: new Date(),
-      lastSyncError: null,
-    },
+    create: { shopDomain, ...tokenFields, installedAt: new Date() },
+    update: { ...tokenFields, uninstalledAt: null, installedAt: new Date(), lastSyncError: null },
   });
 
   // Defaults so every page has settings to read from the first render.
@@ -85,11 +86,13 @@ export async function GET(request) {
     console.error('[storepulse] webhook registration failed', error);
   }
 
-  const destination = hydrated.onboardedAt ? '/dashboard' : '/onboarding';
+  // OAuth runs in the top window (Shopify's consent screen refuses to frame),
+  // so send the merchant back into the Shopify admin rather than leaving them
+  // on our bare domain. The admin then re-opens StorePulse embedded, which is
+  // where they expect to land after installing.
+  const storeHandle = shopDomain.replace('.myshopify.com', '');
   const response = NextResponse.redirect(
-    `${env.appUrl}${destination}?shop=${encodeURIComponent(shopDomain)}&host=${encodeURIComponent(
-      searchParams.get('host') ?? ''
-    )}`
+    `https://admin.shopify.com/store/${storeHandle}/apps/${env.shopifyApiKey}`
   );
   response.cookies.set(SESSION_COOKIE, signSession(shopDomain), sessionCookieOptions);
   return response;

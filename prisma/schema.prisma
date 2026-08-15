@@ -58,6 +58,12 @@ model Store {
   shopDomain   String    @unique
   shopName     String?
   accessToken  String
+  /// Shopify stopped accepting non-expiring tokens in December 2025.
+  /// Access tokens live 1 hour; the refresh token lives 90 days and can be
+  /// redeemed without any user present, so background jobs keep working.
+  tokenExpiresAt        DateTime?
+  refreshToken          String?
+  refreshTokenExpiresAt DateTime?
   email        String?
   currency     String    @default("USD")
   timezone     String    @default("UTC")
