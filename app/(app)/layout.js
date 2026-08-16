@@ -7,6 +7,7 @@ import SyncButton from '@/components/ui/SyncButton';
 import ReconnectBanner from '@/components/ui/ReconnectBanner';
 import { needsReconnect } from '@/lib/shopify/token';
 import BrowserNotifier from '@/components/notifications/BrowserNotifier';
+import SessionTokenBridge from '@/components/SessionTokenBridge';
 import { timeAgo } from '@/lib/utils/format';
 
 export const dynamic = 'force-dynamic';
@@ -20,6 +21,7 @@ export default async function AppLayout({ children }) {
 
   return (
     <div className="sp-shell">
+      <SessionTokenBridge />
       <BrowserNotifier enabled={browserNotifications} />
 
       <aside className="sp-sidebar">
