@@ -23,8 +23,19 @@ export default function RootLayout({ children }) {
           next/script so nothing can defer or reorder it.
         */}
         {process.env.SHOPIFY_API_KEY && (
-          // eslint-disable-next-line @next/next/no-sync-scripts -- Shopify requires App Bridge first in <head>, loaded synchronously
-          <script src="https://cdn.shopify.com/shopifycloud/app-bridge.js" data-api-key={process.env.SHOPIFY_API_KEY} />
+          <>
+            {/*
+              App Bridge reads the client ID from this meta tag, which must
+              precede the script. The data-api-key attribute is the older
+              form — both are set so either resolution path works.
+            */}
+            <meta name="shopify-api-key" content={process.env.SHOPIFY_API_KEY} />
+            {/* eslint-disable-next-line @next/next/no-sync-scripts -- Shopify requires App Bridge first in <head>, loaded synchronously */}
+            <script
+              src="https://cdn.shopify.com/shopifycloud/app-bridge.js"
+              data-api-key={process.env.SHOPIFY_API_KEY}
+            />
+          </>
         )}
       </head>
       <body>{children}</body>
