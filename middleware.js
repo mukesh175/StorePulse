@@ -10,15 +10,49 @@ import { verifySessionToken, hmacSign } from '@/lib/shopify/sessionToken';
  * for subsequent same-document navigations, and is re-derived from a fresh
  * token on every embedded entry.
  */
+/** Recompute the cookie signature to decide whether a session already exists. */
+async function hasValidSession(request, sessionSecret) {
+  const raw = request.cookies.get('sp_session')?.value;
+  if (!raw || !raw.includes('.')) return false;
+
+  const [payload, signature] = raw.split('.');
+  try {
+    const expected = await hmacSign(sessionSecret, payload);
+    if (expected !== signature) return false;
+    const data = JSON.parse(atob(payload.replace(/-/g, '+').replace(/_/g, '/')));
+    return Date.now() - Number(data.iat) < 30 * 24 * 60 * 60 * 1000;
+  } catch {
+    return false;
+  }
+}
+
 export async function middleware(request) {
-  const { searchParams } = request.nextUrl;
+  const { searchParams, pathname } = request.nextUrl;
   const idToken = searchParams.get('id_token');
-  if (!idToken) return NextResponse.next();
 
   const apiKey = process.env.SHOPIFY_API_KEY;
   const apiSecret = process.env.SHOPIFY_API_SECRET;
   const sessionSecret = process.env.APP_SESSION_SECRET || apiSecret;
   if (!apiKey || !apiSecret) return NextResponse.next();
+
+  if (!idToken) {
+    // Embedded document request with no session token and no usable cookie:
+    // bounce so App Bridge can mint one. `embedded`/`host` mark the request as
+    // coming from the Shopify admin, so ordinary visitors are unaffected.
+    const embedded = searchParams.has('embedded') || searchParams.has('host');
+    const isDocument = request.headers.get('sec-fetch-dest') === 'document';
+
+    if (embedded && isDocument && !(await hasValidSession(request, sessionSecret))) {
+      const target = new URL(request.nextUrl);
+      target.searchParams.delete('id_token');
+
+      const bounce = new URL('/session-token-bounce', request.nextUrl.origin);
+      bounce.searchParams.set('shopify-reload', `${pathname}${target.search}`);
+      return NextResponse.redirect(bounce);
+    }
+
+    return NextResponse.next();
+  }
 
   try {
     const { shop } = await verifySessionToken(idToken, { apiKey, apiSecret });
@@ -52,6 +86,7 @@ export const config = {
   matcher: [
     // Everything except static assets and Shopify webhook/OAuth endpoints,
     // which authenticate themselves by HMAC.
-    '/((?!_next/static|_next/image|favicon.ico|icon.svg|api/webhooks|api/auth|api/cron).*)',
+    // session-token-bounce is excluded or it would redirect to itself.
+    '/((?!_next/static|_next/image|favicon.ico|icon.svg|session-token-bounce|api/webhooks|api/auth|api/cron).*)',
   ],
 };
