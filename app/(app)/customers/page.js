@@ -8,6 +8,10 @@ import { formatMoney, formatNumber, timeAgo } from '@/lib/utils/format';
 
 export const dynamic = 'force-dynamic';
 
+// Matches the guard in the customer alert rules: below this, segment counts
+// are noise rather than signal.
+const MIN_USEFUL_CUSTOMERS = 20;
+
 export default async function CustomersPage({ searchParams }) {
   const store = await getCurrentStore();
   if (!store) redirect('/');
@@ -41,6 +45,22 @@ export default async function CustomersPage({ searchParams }) {
         title="Customers"
         subtitle="Segments computed from the last 12 months of orders. StorePulse never contacts your customers — it tells you who needs attention."
       />
+
+      {totalCustomers < MIN_USEFUL_CUSTOMERS && (
+        <div className="sp-banner info mb-3">
+          <span aria-hidden="true">📊</span>
+          <div>
+            <strong>
+              Segments need more customers to be meaningful — you have {formatNumber(totalCustomers)}.
+            </strong>
+            <div className="mt-1">
+              Grouping works from around {MIN_USEFUL_CUSTOMERS} customers onward, which is also when StorePulse
+              starts raising customer alerts. Until then this page will look sparse, and that is expected rather
+              than a problem with your store.
+            </div>
+          </div>
+        </div>
+      )}
 
       <div className="row g-3 mb-4">
         <div className="col-6 col-lg-3">
