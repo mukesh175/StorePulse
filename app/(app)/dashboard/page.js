@@ -2,6 +2,7 @@ import Link from 'next/link';
 import { redirect } from 'next/navigation';
 import { getCurrentStore } from '@/lib/shopify/session';
 import { buildDailyBrief } from '@/lib/brief';
+import { getResolvedValue } from '@/lib/impact';
 import HealthScore from '@/components/dashboard/HealthScore';
 import AlertCard from '@/components/alerts/AlertCard';
 import { RevenueChart, OrdersChart } from '@/components/charts/Charts';
@@ -23,7 +24,7 @@ export default async function DashboardPage() {
   const store = await getCurrentStore();
   if (!store) redirect('/');
 
-  const brief = await buildDailyBrief(store);
+  const [brief, resolved] = await Promise.all([buildDailyBrief(store), getResolvedValue(store, { days: 30 })]);
   const { metrics, counts, health, series } = brief;
   const currency = store.currency;
 
@@ -138,6 +139,22 @@ export default async function DashboardPage() {
           </div>
         </div>
       </div>
+
+      {resolved.count > 0 && (
+        <div className="sp-banner success mt-3">
+          <span aria-hidden="true">🛡</span>
+          <div>
+            <strong>
+              You resolved {resolved.count} issue{resolved.count === 1 ? '' : 's'} covering{' '}
+              {formatMoney(resolved.value, currency)} of revenue at risk in the last {resolved.days} days.
+            </strong>
+            <div className="mt-1">
+              <Link href="/reports">See how this is estimated</Link> — it comes from your own order history at the
+              moment each issue was detected.
+            </div>
+          </div>
+        </div>
+      )}
 
       <div className="mt-4">
         <Section

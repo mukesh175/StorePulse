@@ -9,11 +9,15 @@ export const NAV_ITEMS = [
   { href: '/orders', label: 'Orders', icon: '🧾' },
   { href: '/products', label: 'Products', icon: '📦' },
   { href: '/inventory', label: 'Inventory', icon: '🗃' },
+  { href: '/customers', label: 'Customers', icon: '👥' },
   { href: '/reports', label: 'Reports', icon: '📈' },
   { href: '/notifications', label: 'Notifications', icon: '🔔' },
   { href: '/settings', label: 'Settings', icon: '⚙' },
   { href: '/plan', label: 'Plan', icon: '✦' },
 ];
+
+// Everything up to and including Reports is monitoring; the rest is account.
+const MONITORING_COUNT = NAV_ITEMS.findIndex((i) => i.href === '/reports') + 1;
 
 const MOBILE_ITEMS = NAV_ITEMS.filter((i) =>
   ['/dashboard', '/alerts', '/orders', '/inventory', '/settings'].includes(i.href)
@@ -29,7 +33,7 @@ export function SidebarNav({ criticalCount = 0 }) {
   return (
     <nav className="sp-nav" aria-label="Main">
       <div className="sp-nav-label">Monitoring</div>
-      {NAV_ITEMS.slice(0, 6).map((item) => (
+      {NAV_ITEMS.slice(0, MONITORING_COUNT).map((item) => (
         <Link
           key={item.href}
           href={item.href}
@@ -49,7 +53,7 @@ export function SidebarNav({ criticalCount = 0 }) {
       ))}
 
       <div className="sp-nav-label">Account</div>
-      {NAV_ITEMS.slice(6).map((item) => (
+      {NAV_ITEMS.slice(MONITORING_COUNT).map((item) => (
         <Link
           key={item.href}
           href={item.href}

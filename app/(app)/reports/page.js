@@ -6,7 +6,8 @@ import { getMetricSeries } from '@/lib/metrics';
 import { buildWeeklySummary, getTopProducts, getAlertTrend } from '@/lib/reports';
 import { RevenueChart, OrdersChart, RefundsChart, AlertTrendChart } from '@/components/charts/Charts';
 import { PageHeader, MetricCard, Card, EmptyState } from '@/components/ui/Primitives';
-import { formatMoney, formatNumber } from '@/lib/utils/format';
+import { formatMoney, formatNumber, titleCase } from '@/lib/utils/format';
+import { getImpactSummary, IMPACT_BASIS } from '@/lib/impact';
 
 export const dynamic = 'force-dynamic';
 
@@ -20,11 +21,12 @@ export default async function ReportsPage() {
   const productDays = Math.min(30, historyDays);
   const trendDays = Math.min(14, historyDays);
 
-  const [series30, summary, topProducts, alertTrend] = await Promise.all([
+  const [series30, summary, topProducts, alertTrend, impact] = await Promise.all([
     getMetricSeries(store, chartDays),
     buildWeeklySummary(store),
     getTopProducts(store, { days: productDays, limit: 10 }),
     getAlertTrend(store, trendDays),
+    getImpactSummary(store, { days: Math.min(30, historyDays === 3 ? 30 : historyDays) }),
   ]);
 
   const hasData = series30.some((d) => d.orders > 0);
@@ -109,6 +111,85 @@ export default async function ReportsPage() {
               </Card>
             </div>
           </div>
+
+          <Card className="mt-3">
+            <div className="sp-card-title mb-1">What StorePulse caught</div>
+            <div className="sp-card-sub mb-3">
+              Revenue at risk surfaced in the last {impact.days} days, and how much of it you resolved.
+            </div>
+
+            <div className="row g-3 mb-3">
+              <div className="col-6 col-lg-3">
+                <MetricCard
+                  label="At risk surfaced"
+                  value={formatMoney(impact.totals.valueAtRisk, store.currency)}
+                  footnote={`${impact.totals.detected} alerts`}
+                />
+              </div>
+              <div className="col-6 col-lg-3">
+                <MetricCard
+                  label="Resolved"
+                  value={formatMoney(impact.totals.valueResolved, store.currency)}
+                  footnote={`${impact.totals.resolved} alerts`}
+                />
+              </div>
+              <div className="col-6 col-lg-3">
+                <MetricCard
+                  label="Still open"
+                  value={formatMoney(
+                    Math.max(0, impact.totals.valueAtRisk - impact.totals.valueResolved),
+                    store.currency
+                  )}
+                  footnote="needs attention"
+                />
+              </div>
+              <div className="col-6 col-lg-3">
+                <MetricCard
+                  label="Acted on"
+                  value={`${impact.totals.actionRate.toFixed(0)}%`}
+                  footnote="of alerts raised"
+                />
+              </div>
+            </div>
+
+            {impact.items.length === 0 ? (
+              <p className="sp-card-sub mb-0">No alerts were raised in this period.</p>
+            ) : (
+              <div className="sp-table-wrap">
+                <table className="sp-table">
+                  <thead>
+                    <tr>
+                      <th>Alert type</th>
+                      <th>Raised</th>
+                      <th>Resolved</th>
+                      <th>At risk</th>
+                      <th>How it&apos;s estimated</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {impact.items.map((row) => (
+                      <tr key={row.type}>
+                        <td>
+                          <strong>{titleCase(row.type)}</strong>
+                        </td>
+                        <td className="sp-num">{row.detected}</td>
+                        <td className="sp-num">{row.resolved}</td>
+                        <td className="sp-num">
+                          {row.valueAtRisk > 0 ? formatMoney(row.valueAtRisk, store.currency) : '—'}
+                        </td>
+                        <td className="sp-card-sub">{IMPACT_BASIS[row.type] ?? 'Not estimated'}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+
+            <div className="sp-help mt-2">
+              These are estimates of exposure based on your own order history at the moment each issue was
+              detected — not a claim about revenue StorePulse generated.
+            </div>
+          </Card>
 
           <Card className="mt-3">
             <div className="sp-card-title mb-1">Top products</div>

@@ -1,0 +1,2 @@
+-- AlterTable
+ALTER TABLE "Alert" ADD COLUMN     "valueAtRisk" DECIMAL(14,2) NOT NULL DEFAULT 0;

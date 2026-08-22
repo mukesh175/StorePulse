@@ -205,6 +205,10 @@ model Alert {
   resourceUrl     String?
   whyItMatters    String?
   recommendedAction String?
+  /// Estimated revenue exposed by this issue, in the store's currency.
+  /// Recorded at detection time so the impact report reflects what was true
+  /// when the merchant was told, not what is true now.
+  valueAtRisk     Decimal  @default(0) @db.Decimal(14, 2)
   metadata        Json?
   status          AlertStatus   @default(OPEN)
   occurrences     Int           @default(1)
