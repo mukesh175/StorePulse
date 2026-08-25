@@ -11,7 +11,10 @@
     "postinstall": "prisma generate",
     "db:migrate": "prisma migrate dev",
     "db:deploy": "prisma migrate deploy",
-    "db:studio": "prisma studio"
+    "db:studio": "prisma studio",
+    "shopify": "shopify",
+    "shopify:deploy": "shopify app deploy",
+    "shopify:link": "shopify app config link"
   },
   "dependencies": {
     "@prisma/client": "^6.2.1",
@@ -25,6 +28,7 @@
   },
   "devDependencies": {
     "@eslint/eslintrc": "^3.2.0",
+    "@shopify/cli": "~3.94.3",
     "eslint": "^9.18.0",
     "eslint-config-next": "^15.1.6",
     "prisma": "^6.2.1"
