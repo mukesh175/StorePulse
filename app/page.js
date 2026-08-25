@@ -26,9 +26,21 @@ export default async function HomePage({ searchParams }) {
     redirect(withParams(store.onboardedAt ? '/dashboard' : '/onboarding'));
   }
 
+  // Shopify only sends `embedded`/`host` when the app is running in the admin
+  // frame. App review saw this page — the public install form — rendered
+  // inside Shopify admin, and had to type their own shop domain into it.
+  const isEmbedded = Boolean(params?.embedded || params?.host);
+
+  if (isEmbedded && !params?.id_token) {
+    // No session token to work with. Bounce so App Bridge issues one; the
+    // request then completes the install through token exchange.
+    const reload = forward ? `/?${forward}` : '/';
+    redirect(`/session-token-bounce?shopify-reload=${encodeURIComponent(reload)}`);
+  }
+
   // Shop is known but we could not establish credentials — fall back to OAuth.
   // Shopify's authorize screen cannot render framed, so break out to the top.
-  if (shopDomain) {
+  if (shopDomain || isEmbedded) {
     return <ExitIframe url={`/api/auth?${forward}`} />;
   }
 
