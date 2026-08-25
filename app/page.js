@@ -10,21 +10,27 @@ export const dynamic = 'force-dynamic';
 export default async function HomePage({ searchParams }) {
   const params = await searchParams;
   const shopDomain = normalizeShopDomain(params?.shop);
-  const store = await getCurrentStore();
 
-  // Shopify loads the app's URL with ?shop=&host=. If this browser already has
-  // a valid session for that same shop, go straight in.
-  if (shopDomain) {
-    if (store && store.shopDomain === shopDomain) {
-      redirect(store.onboardedAt ? '/dashboard' : '/onboarding');
-    }
+  // `install: true` completes a Shopify managed installation via token
+  // exchange when this is the first time we have seen the shop.
+  const store = await getCurrentStore({ install: true });
 
-    // Otherwise start OAuth. Shopify's authorize screen cannot render inside
-    // the admin iframe, so break out to the top window instead of redirecting.
-    return <ExitIframe url={`/api/auth?${new URLSearchParams(params).toString()}`} />;
+  // Query parameters must survive the hop. Dropping id_token here was pushing
+  // embedded loads onto the cookie, which is third-party inside the admin
+  // iframe and frequently blocked — the app then fell through to this landing
+  // page rendered inside Shopify admin.
+  const forward = new URLSearchParams(params ?? {}).toString();
+  const withParams = (path) => (forward ? `${path}?${forward}` : path);
+
+  if (store) {
+    redirect(withParams(store.onboardedAt ? '/dashboard' : '/onboarding'));
   }
 
-  if (store) redirect(store.onboardedAt ? '/dashboard' : '/onboarding');
+  // Shop is known but we could not establish credentials — fall back to OAuth.
+  // Shopify's authorize screen cannot render framed, so break out to the top.
+  if (shopDomain) {
+    return <ExitIframe url={`/api/auth?${forward}`} />;
+  }
 
   const demoMode = process.env.DEMO_MODE === 'true';
   const configured = Boolean(process.env.SHOPIFY_API_KEY && process.env.SHOPIFY_API_SECRET);

@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import { headers } from 'next/headers';
 import { redirect } from 'next/navigation';
 import { getCurrentStore } from '@/lib/shopify/session';
 import { getAlertCounts } from '@/lib/health';
@@ -13,8 +14,16 @@ import { timeAgo } from '@/lib/utils/format';
 export const dynamic = 'force-dynamic';
 
 export default async function AppLayout({ children }) {
-  const store = await getCurrentStore();
-  if (!store) redirect('/');
+  const store = await getCurrentStore({ install: true });
+
+  // Sending an embedded request back to "/" renders the marketing page inside
+  // the Shopify admin. Bounce instead: App Bridge mints a fresh session token
+  // and returns here with it.
+  if (!store) {
+    const headerList = await headers();
+    const path = headerList.get('x-invoke-path') || '/dashboard';
+    redirect(`/session-token-bounce?shopify-reload=${encodeURIComponent(path)}`);
+  }
 
   const counts = await getAlertCounts(store.id);
   const browserNotifications = store.preference?.browserNotificationsEnabled ?? false;

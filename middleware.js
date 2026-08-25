@@ -63,7 +63,13 @@ export async function middleware(request) {
       .replace(/=+$/, '');
     const signature = await hmacSign(sessionSecret, payload);
 
-    const response = NextResponse.next();
+    // Forward the verified shop and token so server components can complete a
+    // managed installation (token exchange) without another round trip.
+    const requestHeaders = new Headers(request.headers);
+    requestHeaders.set('x-storepulse-shop', shop);
+    requestHeaders.set('x-storepulse-id-token', idToken);
+
+    const response = NextResponse.next({ request: { headers: requestHeaders } });
     response.cookies.set('sp_session', `${payload}.${signature}`, {
       httpOnly: true,
       secure: process.env.NODE_ENV === 'production',
@@ -71,9 +77,6 @@ export async function middleware(request) {
       path: '/',
       maxAge: 30 * 24 * 60 * 60,
     });
-    // Downstream server components read the verified shop from here rather
-    // than trusting any query parameter.
-    response.headers.set('x-storepulse-shop', shop);
     return response;
   } catch {
     // An invalid token is not fatal — the request falls through to the normal
