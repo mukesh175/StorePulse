@@ -181,6 +181,13 @@ export default function AlertSettingsForm({ initial }) {
           onChange={set('salesAlertsEnabled')}
         />
         <Toggle
+          id="profitAlertsEnabled"
+          label="Profit leak alerts"
+          help="Unprofitable products, expensive discounts and loss-making shipping zones."
+          checked={form.profitAlertsEnabled}
+          onChange={set('profitAlertsEnabled')}
+        />
+        <Toggle
           id="productAlertsEnabled"
           label="Product performance alerts"
           help="Per-product sales drops and demand spikes."

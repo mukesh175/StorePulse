@@ -32,5 +32,3 @@ redirect_urls = [ "https://store-pulse-chi.vercel.app/api/auth/callback" ]
 embedded = false
 
 [build]
-# Push this file's settings to the Partner dashboard on every deploy.
-include_config_on_deploy = true

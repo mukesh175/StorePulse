@@ -10,6 +10,7 @@ export const NAV_ITEMS = [
   { href: '/products', label: 'Products', icon: '📦' },
   { href: '/inventory', label: 'Inventory', icon: '🗃' },
   { href: '/customers', label: 'Customers', icon: '👥' },
+  { href: '/profit', label: 'Profit leaks', icon: '💸' },
   { href: '/reports', label: 'Reports', icon: '📈' },
   { href: '/notifications', label: 'Notifications', icon: '🔔' },
   { href: '/settings', label: 'Settings', icon: '⚙' },

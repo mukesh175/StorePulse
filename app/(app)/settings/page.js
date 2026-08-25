@@ -4,6 +4,8 @@ import { getAlertSettings } from '@/lib/alerts/scan';
 import { getPreferences } from '@/lib/notifications/dispatch';
 import { planFor, historyWindowDays } from '@/lib/billing';
 import AlertSettingsForm from '@/components/settings/AlertSettingsForm';
+import CostSettingsForm from '@/components/settings/CostSettingsForm';
+import { getCostSettings } from '@/lib/profit/costs';
 import { PageHeader, Card, Section } from '@/components/ui/Primitives';
 import { formatDate } from '@/lib/utils/format';
 import Link from 'next/link';
@@ -14,7 +16,11 @@ export default async function SettingsPage() {
   const store = await getCurrentStore();
   if (!store) redirect('/');
 
-  const [settings, preferences] = await Promise.all([getAlertSettings(store), getPreferences(store)]);
+  const [settings, preferences, costSettings] = await Promise.all([
+    getAlertSettings(store),
+    getPreferences(store),
+    getCostSettings(store),
+  ]);
   const currentPlan = planFor(store);
 
   return (
@@ -69,6 +75,24 @@ export default async function SettingsPage() {
             refundAlertsEnabled: settings.refundAlertsEnabled,
             salesAlertsEnabled: settings.salesAlertsEnabled,
             productAlertsEnabled: settings.productAlertsEnabled,
+            profitAlertsEnabled: settings.profitAlertsEnabled,
+          }}
+        />
+      </Section>
+
+      <Section
+        title="Profit assumptions"
+        sub="Used by the profit leak report for the costs Shopify does not know."
+      >
+        <CostSettingsForm
+          currency={store.currency}
+          initial={{
+            shippingCostPerOrder: Number(costSettings.shippingCostPerOrder),
+            paymentFeePercent: Number(costSettings.paymentFeePercent),
+            codRtoPercent: Number(costSettings.codRtoPercent),
+            codRtoCostPerOrder: Number(costSettings.codRtoCostPerOrder),
+            monthlyAdSpend: Number(costSettings.monthlyAdSpend),
+            freeShippingThreshold: Number(costSettings.freeShippingThreshold),
           }}
         />
       </Section>

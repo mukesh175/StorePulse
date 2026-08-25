@@ -40,6 +40,7 @@ export const PUT = withStore(async (request) => {
     refundAlertsEnabled: validate.bool(body.refundAlertsEnabled, current.refundAlertsEnabled),
     salesAlertsEnabled: validate.bool(body.salesAlertsEnabled, current.salesAlertsEnabled),
     productAlertsEnabled: validate.bool(body.productAlertsEnabled, current.productAlertsEnabled),
+    profitAlertsEnabled: validate.bool(body.profitAlertsEnabled, current.profitAlertsEnabled),
   };
 
   // Critical must always be at least as late as the warning threshold.

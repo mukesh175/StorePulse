@@ -89,6 +89,7 @@ model Store {
   metrics       DailyMetric[]
   settings      AlertSetting?
   preference    NotificationPreference?
+  costSetting   CostSetting?
   notifications NotificationLog[]
   webhookEvents WebhookEvent[]
   inventorySnapshots InventorySnapshot[]
@@ -131,6 +132,9 @@ model ProductVariant {
   inventoryItemId    String?
   inventoryQuantity  Int      @default(0)
   previousQuantity   Int      @default(0)
+  /// Cost per unit from Shopify's inventory item. Null when the merchant has
+  /// not entered a cost — margin is then reported as unknown, never as 100%.
+  unitCost           Decimal? @db.Decimal(12, 2)
   inventoryPolicy    String   @default("DENY")
   inventoryTracked   Boolean  @default(true)
   availableForSale   Boolean  @default(true)
@@ -162,6 +166,12 @@ model Order {
   isCOD             Boolean   @default(false)
   isCancelled       Boolean   @default(false)
   lineItemCount     Int       @default(0)
+  /// Profit inputs, all measured from Shopify.
+  totalDiscounts    Decimal   @default(0) @db.Decimal(12, 2)
+  shippingCharged   Decimal   @default(0) @db.Decimal(12, 2)
+  discountCodes     String[]
+  shippingCountry   String?
+  shippingProvince  String?
   processedAt       DateTime?
   fulfilledAt       DateTime?
   createdAt         DateTime  @default(now())
@@ -264,6 +274,32 @@ model AlertSetting {
   refundAlertsEnabled   Boolean  @default(true)
   salesAlertsEnabled    Boolean  @default(true)
   productAlertsEnabled  Boolean  @default(true)
+  profitAlertsEnabled   Boolean  @default(true)
+  createdAt             DateTime @default(now())
+  updatedAt             DateTime @updatedAt
+
+  store Store @relation(fields: [shopId], references: [id], onDelete: Cascade)
+}
+
+/// Merchant-supplied figures Shopify cannot provide. Every one of these is an
+/// assumption, and the UI labels it as such wherever it affects a number.
+model CostSetting {
+  id                    String   @id @default(cuid())
+  shopId                String   @unique
+  /// What it costs you to ship one order, on average.
+  shippingCostPerOrder  Decimal  @default(0) @db.Decimal(10, 2)
+  /// Payment gateway fee as a percentage of order value.
+  paymentFeePercent     Decimal  @default(2) @db.Decimal(5, 2)
+  /// Share of COD orders that come back undelivered (RTO).
+  codRtoPercent         Decimal  @default(0) @db.Decimal(5, 2)
+  /// What an RTO costs you: forward plus return leg.
+  codRtoCostPerOrder    Decimal  @default(0) @db.Decimal(10, 2)
+  /// Monthly ad spend, blended across the catalogue for CAC.
+  monthlyAdSpend        Decimal  @default(0) @db.Decimal(12, 2)
+  /// Current free-shipping threshold, used to model changing it.
+  freeShippingThreshold Decimal  @default(0) @db.Decimal(10, 2)
+  /// Fallback margin when a product has no cost recorded. Null = report unknown.
+  defaultMarginPercent  Decimal? @db.Decimal(5, 2)
   createdAt             DateTime @default(now())
   updatedAt             DateTime @updatedAt
 
