@@ -11,6 +11,7 @@ import {
 } from '@/lib/shopify/auth';
 import { registerWebhooks } from '@/lib/shopify/webhooks';
 import { syncShopProfile } from '@/lib/sync';
+import { syncSubscriptionState } from '@/lib/billing';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -57,7 +58,20 @@ export async function GET(request) {
   const store = await prisma.store.upsert({
     where: { shopDomain },
     create: { shopDomain, ...tokenFields, installedAt: new Date() },
-    update: { ...tokenFields, uninstalledAt: null, installedAt: new Date(), lastSyncError: null },
+    update: {
+      ...tokenFields,
+      uninstalledAt: null,
+      installedAt: new Date(),
+      lastSyncError: null,
+      // Reinstalling must not restore a paid plan: Shopify cancelled the
+      // subscription on uninstall, so nothing is being charged. The
+      // reconciliation below re-grants a plan only if Shopify says one is
+      // genuinely active.
+      plan: 'FREE',
+      subscriptionId: null,
+      subscriptionStatus: null,
+      planActivatedAt: null,
+    },
   });
 
   // Defaults so every page has settings to read from the first render.
@@ -84,6 +98,12 @@ export async function GET(request) {
     await registerWebhooks(hydrated);
   } catch (error) {
     console.error('[storepulse] webhook registration failed', error);
+  }
+
+  try {
+    await syncSubscriptionState(hydrated);
+  } catch (error) {
+    console.error('[storepulse] subscription reconciliation failed', error);
   }
 
   // OAuth runs in the top window (Shopify's consent screen refuses to frame),

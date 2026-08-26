@@ -6,6 +6,7 @@ import { runAlertScan } from '@/lib/alerts/scan';
 import { buildDailyBrief } from '@/lib/brief';
 import { dispatchDailyDigest, getPreferences } from '@/lib/notifications/dispatch';
 import { localHourInTimezone } from '@/lib/utils/dates';
+import { syncSubscriptionState } from '@/lib/billing';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -33,6 +34,16 @@ export async function GET(request) {
   const skipDigest = searchParams.get('skipDigest') === 'true';
 
   const results = await forEachActiveStore(prisma, async (store) => {
+    // Safety net: if a subscription webhook was ever missed, this catches the
+    // drift rather than letting a store keep a plan it no longer pays for.
+    if (!store.isDemo) {
+      try {
+        await syncSubscriptionState(store);
+      } catch (error) {
+        console.error(`[storepulse] subscription reconcile failed for ${store.shopDomain}`, error.message);
+      }
+    }
+
     await refreshMetrics(store, { days: 2 });
     const scan = await runAlertScan(store, { notify: true });
 
