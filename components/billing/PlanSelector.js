@@ -8,6 +8,7 @@ export default function PlanSelector({ plans, planOrder, currentPlan, isDemo }) 
   const router = useRouter();
   const [busy, setBusy] = useState(null);
   const [error, setError] = useState(null);
+  const [pricingUrl, setPricingUrl] = useState(null);
   const [, startTransition] = useTransition();
 
   const currentIndex = planOrder.indexOf(currentPlan);
@@ -23,12 +24,16 @@ export default function PlanSelector({ plans, planOrder, currentPlan, isDemo }) 
         body: JSON.stringify({ plan: planId }),
       });
 
-      if (data.confirmationUrl) {
-        // Shopify's approval screen cannot render inside the admin iframe.
-        if (window.top && window.top !== window.self) {
-          window.top.location.href = data.confirmationUrl;
-        } else {
-          window.location.href = data.confirmationUrl;
+      if (data.pricingUrl) {
+        setPricingUrl(data.pricingUrl);
+        // Shopify's plan page cannot render inside the app frame, and the
+        // iframe only permits top-level navigation on a real click — so if
+        // this assignment is ignored, the link below is the way through.
+        try {
+          if (window.top && window.top !== window.self) window.top.location.href = data.pricingUrl;
+          else window.location.href = data.pricingUrl;
+        } catch {
+          /* blocked — the link rendered below handles it */
         }
         return;
       }
@@ -47,6 +52,21 @@ export default function PlanSelector({ plans, planOrder, currentPlan, isDemo }) 
         <div className="sp-banner critical mb-3">
           <span aria-hidden="true">⚠</span>
           <div>{error}</div>
+        </div>
+      )}
+
+      {pricingUrl && (
+        <div className="sp-banner info mb-3">
+          <span aria-hidden="true">→</span>
+          <div className="flex-grow-1">
+            <strong>Choosing a plan happens in Shopify.</strong>
+            <div className="mt-1">
+              Shopify handles the payment and approval — StorePulse never sees your card details.
+            </div>
+            <a className="sp-btn sp-btn-sm sp-btn-primary mt-2" href={pricingUrl} target="_top" rel="noreferrer">
+              Open plans in Shopify
+            </a>
+          </div>
         </div>
       )}
 
@@ -97,11 +117,7 @@ export default function PlanSelector({ plans, planOrder, currentPlan, isDemo }) 
                       disabled={busy !== null || isDemo}
                       title={isDemo ? 'The demo store cannot change plans' : undefined}
                     >
-                      {busy === planId
-                        ? 'Working…'
-                        : isDowngrade
-                          ? `Downgrade to ${plan.name}`
-                          : `Upgrade to ${plan.name}`}
+                      {busy === planId ? 'Opening Shopify…' : `Choose ${plan.name}`}
                     </button>
                   )}
                 </div>
@@ -112,9 +128,9 @@ export default function PlanSelector({ plans, planOrder, currentPlan, isDemo }) 
       </div>
 
       <p className="sp-help mt-3">
-        Upgrades are approved and billed through Shopify — StorePulse never sees your payment details. On a
-        development store Shopify creates a test charge, so nothing is actually charged. Downgrading to Free
-        cancels the subscription immediately.
+        Plans are managed by Shopify. Choosing one opens Shopify&apos;s plan page, where you approve, change or
+        cancel — StorePulse never sees your payment details, and on a development store nothing is actually
+        charged. Your plan here updates as soon as Shopify confirms it.
       </p>
     </>
   );
