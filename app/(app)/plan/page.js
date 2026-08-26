@@ -9,6 +9,7 @@ import {
   hasFeature,
   FEATURES,
   BILLING_ENABLED,
+  syncSubscriptionState,
 } from '@/lib/billing';
 import PlanSelector from '@/components/billing/PlanSelector';
 import { PageHeader, Card, Section } from '@/components/ui/Primitives';
@@ -25,10 +26,24 @@ const ENTITLEMENTS = [
 ];
 
 export default async function PlanPage({ searchParams }) {
-  const store = await getCurrentStore();
+  let store = await getCurrentStore();
   if (!store) redirect('/');
 
   const params = await searchParams;
+
+  // Shopify owns the subscription, so ask it what is actually active rather
+  // than trusting our cached copy. This is the page where being wrong matters
+  // most — a merchant who has just chosen a plan must see it here, even if the
+  // webhook was missed or was never registered on this install.
+  if (!store.isDemo) {
+    try {
+      const reconciled = await syncSubscriptionState(store);
+      store = { ...store, ...reconciled.store };
+    } catch (error) {
+      console.error('[storepulse] plan reconciliation failed', error);
+    }
+  }
+
   const plan = planFor(store);
   const historyDays = historyWindowDays(store);
   const alertDays = alertHistoryDays(store);

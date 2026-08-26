@@ -34,7 +34,14 @@ export const POST = withStore(async (request) => {
   const deadline = Date.now() + 35_000;
 
   try {
-    if (body.registerWebhooks) await registerWebhooks(store);
+    // Always re-register: the call is idempotent, and stores installed before
+    // a topic was added would otherwise never receive it. That is how this
+    // store missed app_subscriptions/update and stopped seeing plan changes.
+    try {
+      await registerWebhooks(store);
+    } catch (error) {
+      console.error('[storepulse] webhook registration failed during sync', error);
+    }
 
     const sync = await runFullSync(store, { max: 500, deadline });
     await backfillMetrics(sync.store, { days: 60 });
